@@ -1,0 +1,13 @@
+[package]
+name = "ranch"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.98"
+ascii-forge = {version = "1.1.1", features = ["serde"]}
+clap = { version = "4.5.37", features = ["derive"] }
+dirs = "6.0.0"
+serde = { version = "1.0.219", features = ["derive"] }
+serde_yaml = "0.9.34"
+widget-forge = "0.1.0"

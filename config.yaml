@@ -1,0 +1,52 @@
+---
+  # What command to be used for running a command (This will also be used to run the executor)
+  shell: "zsh"
+
+  # What command to be used to execute an application
+  executor: "hyprctl dispatch exec"
+
+  # How many items will the search algorithm find?
+  max_search: 30
+
+  # How many items with the renderer draw (works with scrolling)
+  max_render: 30
+
+  # Logging is an in-terminal solution to what is being run. Not a error thing
+  # So using an exit on each means not being able to read the logs
+  log: false
+  max_log: 30
+
+  # What events are run no matter what you are doing
+  # These are always run after the regular event
+  each:
+    - exit
+
+  # Each Possible Event
+  events:
+    # An Example event that will run ghostty using the executor
+    # This will then exit, as the `each` section contains an exit event
+    - icon: ""
+      name: "Ghostty"
+      icon_color: green
+      each:
+        - !exec ghostty
+
+    # An Example event that will send a notification saying Hello, World.
+    # This example will ignore the `each` calls, so it won't exit
+    - icon: "H"
+      name: "Hello, World!"
+      icon_color: blue
+      ignore_each: true
+      each:
+        - !cmd notify-send -e "Hello, World!"
+
+    # An Example that will drop to shell, run a command, then get the output.
+    # This could be some "sub-menu", or a calculator/ai or whatever
+    # For this situation, it'll run yazi, and do nothing with it
+    - icon: "Y"
+      name: "Yazi"
+      icon_color: yellow
+      ignore_each: true
+      each:
+        - !shell yazi
+ 
