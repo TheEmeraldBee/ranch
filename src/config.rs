@@ -156,7 +156,7 @@ impl Config {
             Some(t) => t,
             None => dirs::config_dir()
                 .ok_or(anyhow!("Failed to find config dir"))?
-                .join("/ranch/config.yaml"),
+                .join("ranch/config.yaml"),
         };
 
         let mut file = File::open(directory)?;
