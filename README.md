@@ -1,4 +1,4 @@
-![[Screenshot.png]]
+![Screenshot](https://github.com/TheEmeraldBee/ranch/blob/master/Screenshot.png)
 
 # Ranch
 A basic application launcher to make running your favorite programs as easy as possible!
