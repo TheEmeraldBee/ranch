@@ -1,13 +1,7 @@
-use std::{
-    fs::File,
-    io::{self, Read},
-    path::PathBuf,
-    process::Command,
-    thread::sleep,
-    time::Duration,
-};
+use std::{fs::File, io::Read, path::PathBuf, process::Command};
 
 use anyhow::anyhow;
+use crokey::KeyCombination;
 use serde::Deserialize;
 
 use ascii_forge::{
@@ -17,9 +11,7 @@ use ascii_forge::{
         crossterm::{
             cursor::Hide,
             execute,
-            terminal::{
-                DisableLineWrap, EnterAlternateScreen, LeaveAlternateScreen, enable_raw_mode,
-            },
+            terminal::{DisableLineWrap, EnterAlternateScreen, enable_raw_mode},
         },
     },
 };
@@ -100,6 +92,18 @@ fn reset() -> Color {
 }
 
 #[derive(Deserialize, Debug, Clone)]
+pub enum Entry {
+    #[serde(rename = "folder")]
+    Folder {
+        name: String,
+        #[serde(default = "Vec::new")]
+        entries: Vec<Entry>,
+    },
+    #[serde(rename = "entry")]
+    Entry(ExecInfo),
+}
+
+#[derive(Deserialize, Debug, Clone)]
 pub struct ExecInfo {
     pub icon: String,
     pub name: String,
@@ -113,23 +117,64 @@ pub struct ExecInfo {
     pub text_color: Color,
 
     #[serde(default = "Vec::new")]
-    pub each: Vec<ExecEvent>,
+    pub events: Vec<ExecEvent>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug)]
+#[serde(default)]
+pub struct BindMap {
+    pub logs: Vec<KeyCombination>,
+    pub insert: Vec<KeyCombination>,
+    pub normal: Vec<KeyCombination>,
+
+    pub quit: Vec<KeyCombination>,
+
+    pub run: Vec<KeyCombination>,
+
+    pub clear: Vec<KeyCombination>,
+
+    pub up: Vec<KeyCombination>,
+    pub down: Vec<KeyCombination>,
+    pub exit: Vec<KeyCombination>,
+    pub enter: Vec<KeyCombination>,
+}
+
+impl Default for BindMap {
+    fn default() -> Self {
+        Self {
+            logs: vec![crokey::key!(shift - l)],
+            insert: vec![crokey::key!(i)],
+            normal: vec![crokey::key!(esc), crokey::key!(q)],
+
+            quit: vec![crokey::key!(esc), crokey::key!(q)],
+
+            run: vec![crokey::key!(enter)],
+
+            clear: vec![crokey::key!(ctrl - l), crokey::key!(c)],
+
+            up: vec![crokey::key!(up), crokey::key!(k)],
+            down: vec![crokey::key!(down), crokey::key!(j)],
+            exit: vec![crokey::key!(left), crokey::key!(h)],
+            enter: vec![crokey::key!(right), crokey::key!(l), crokey::key!(enter)],
+        }
+    }
+}
+
+#[derive(Deserialize, Debug)]
 #[serde(default)]
 pub struct Config {
     pub shell: String,
     pub executor: String,
     pub each: Vec<ExecEvent>,
 
-    pub log: bool,
+    pub binds: BindMap,
+
     pub max_log_lines: usize,
 
     pub max_search: usize,
     pub max_render: u16,
 
-    pub events: Vec<ExecInfo>,
+    pub entries: Vec<Entry>,
 }
 
 impl Default for Config {
@@ -139,13 +184,14 @@ impl Default for Config {
             executor: "hyprctl dispatch exec".to_string(),
             each: Vec::new(),
 
-            log: false,
             max_log_lines: 30,
 
             max_search: 30,
             max_render: 30,
 
-            events: Vec::new(),
+            entries: Vec::new(),
+
+            binds: BindMap::default(),
         }
     }
 }
@@ -167,19 +213,75 @@ impl Config {
         Ok(code)
     }
 
-    pub fn matching(&self, key: &str, max: usize) -> Vec<usize> {
-        let mut results = vec![];
-        for (i, event) in self.events.iter().enumerate() {
-            let rank = rank(key, &event.name);
-            results.push((rank, i));
+    pub fn get_entry(&self, path: Vec<usize>, item: usize) -> Entry {
+        if path.is_empty() {
+            return self.entries[item].clone();
         }
-        let mut results = results
-            .iter()
-            .filter(|x| x.0.is_some())
-            .map(|x| (x.0.unwrap(), x.1))
+        let mut entry_list = &self.entries;
+        for row in &path {
+            if let Entry::Folder { entries, .. } = &entry_list[*row] {
+                entry_list = entries;
+            } else {
+                panic!("Path encountered a entry and not a folder")
+            }
+        }
+
+        entry_list[item].clone()
+    }
+
+    pub fn list_path(&self, path: Vec<usize>) -> Vec<(Vec<usize>, usize)> {
+        if path.is_empty() {
+            return (0..self.entries.len())
+                .into_iter()
+                .map(|x| (path.clone(), x))
+                .collect();
+        }
+        let mut entry_list = &self.entries;
+        for row in &path {
+            if let Entry::Folder { entries, .. } = &entry_list[*row] {
+                entry_list = entries;
+            } else {
+                panic!("Path encountered a entry and not a folder")
+            }
+        }
+
+        return (0..entry_list.len())
+            .into_iter()
+            .map(|x| (path.clone(), x))
+            .collect();
+    }
+
+    pub fn matching(&self, key: &str, max: usize) -> Vec<(Vec<usize>, usize)> {
+        let r = entry_rank(&self.entries, key, vec![]);
+        let mut results = r
+            .into_iter()
+            .filter(|x| x.1.is_some())
+            .map(|x| (x.0, x.1.unwrap(), x.2))
             .collect::<Vec<_>>();
         results.sort();
 
-        results.iter().map(|x| x.1).take(max).collect()
+        results.into_iter().map(|x| (x.0, x.2)).take(max).collect()
     }
+}
+
+fn entry_rank(
+    entries: &[Entry],
+    key: &str,
+    cur_path: Vec<usize>,
+) -> Vec<(Vec<usize>, Option<i32>, usize)> {
+    let mut results = vec![];
+    for (i, entry) in entries.iter().enumerate() {
+        match entry {
+            Entry::Folder { entries, .. } => {
+                let mut new_path = cur_path.clone();
+                new_path.push(i);
+                results.extend(entry_rank(entries, key, new_path));
+            }
+            Entry::Entry(e) => {
+                let rank = rank(key, &e.name);
+                results.push((cur_path.clone(), rank, i));
+            }
+        }
+    }
+    results
 }

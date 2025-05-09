@@ -3,9 +3,15 @@ use ascii_forge::prelude::*;
 use crate::app_data::AppData;
 
 pub fn clear(w: &mut Window, d: &mut AppData) {
-    if event!(w, Event::Key(k) => k.code == KeyCode::Down || k.code == KeyCode::Char('c')) {
-        d.cur_search = "".to_string();
-        d.update_search();
+    for event in w.events() {
+        let Event::Key(k) = event else { continue };
+        let Some(comb) = d.combiner.transform(k.clone()) else {
+            continue;
+        };
+        if d.config.binds.clear.iter().any(|x| *x == comb) {
+            d.cur_search = "".to_string();
+            d.update_search();
+        }
     }
 }
 

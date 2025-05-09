@@ -1,6 +1,7 @@
 use ascii_forge::window::{StyledContent, Stylize, Window};
+use crokey::Combiner;
 
-use crate::config::Config;
+use crate::config::{Config, Entry};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum AppState {
@@ -20,18 +21,21 @@ impl AppState {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct AppData {
     pub should_exit: bool,
     pub state: AppState,
     pub config: Config,
 
+    pub path: Vec<usize>,
     pub selected: usize,
     pub cur_search: String,
-    pub cur_items: Vec<usize>,
+    pub cur_items: Vec<(Vec<usize>, usize)>,
     pub scroll: usize,
 
     pub log: Vec<Vec<StyledContent<String>>>,
+
+    pub combiner: Combiner,
 }
 
 impl AppData {
@@ -45,9 +49,13 @@ impl AppData {
             cur_items: vec![],
             scroll: 0,
 
+            path: vec![],
+
             config,
 
             log: vec![],
+
+            combiner: Combiner::default(),
         };
         ret.update_search();
         ret
@@ -62,23 +70,47 @@ impl AppData {
     }
 
     pub fn run(&mut self, window: &mut Window) {
-        let event = self.config.events[self.cur_items[self.selected]].clone();
+        let (path, i) = self.cur_items[self.selected].clone();
+        self.log(vec![
+            "[SEARCHING] ".to_string().red(),
+            format!("Searching for entry with path {path:?}").green(),
+        ]);
+
+        let event = match self.config.get_entry(path, i) {
+            Entry::Folder { .. } => return, // Ignore this call
+            Entry::Entry(e) => e,
+        };
+
         self.log(vec![
             "[EVENT] ".to_string().red(),
-            format!(
-                "Beginning Run of {} : {}",
-                self.cur_items[self.selected], event.name
-            )
-            .green(),
+            format!("Beginning Run of {}", event.name).green(),
         ]);
         if !event.ignore_each {
             self.run_each(window);
         }
-        event.each.iter().for_each(|x| x.run(window, self));
+        event.events.iter().for_each(|x| x.run(window, self));
     }
 
     pub fn update_search(&mut self) {
         self.selected = 0;
+        if self.cur_search == "".to_string() {
+            self.cur_items = self.config.list_path(self.path.clone());
+
+            // Not allowed to be in empty directories
+            if self.cur_items.is_empty() {
+                let s = self.path.pop().unwrap();
+                self.update_search();
+                self.selected = self
+                    .cur_items
+                    .iter()
+                    .enumerate()
+                    .find_map(|(idx, x)| if x.1 == s { Some(idx) } else { None })
+                    .unwrap_or(0);
+            }
+
+            return;
+        }
+
         self.cur_items = self
             .config
             .matching(&self.cur_search, self.config.max_search);

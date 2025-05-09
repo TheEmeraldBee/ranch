@@ -22,7 +22,8 @@ fn main() -> anyhow::Result<()> {
 
     let config = Config::load(args.config)?;
 
-    let window = Window::init()?;
+    let mut window = Window::init()?;
+    window.keyboard().unwrap();
     handle_panics();
     Scene::new(window, AppData::new(config))
         .insert_conditional_widgets(|_w, d| d.state == AppState::Search, (input_handler,))

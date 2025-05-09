@@ -168,6 +168,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "crokey"
+version = "1.1.2"
+source = "git+https://github.com/TheEmeraldBee/crokey?branch=crossterm-29#8e14c6f32f6bcbf17739a698b86048575cfaa73b"
+dependencies = [
+ "crokey-proc_macros",
+ "crossterm",
+ "once_cell",
+ "serde",
+ "strict",
+]
+
+[[package]]
+name = "crokey-proc_macros"
+version = "1.1.2"
+source = "git+https://github.com/TheEmeraldBee/crokey?branch=crossterm-29#8e14c6f32f6bcbf17739a698b86048575cfaa73b"
+dependencies = [
+ "crossterm",
+ "proc-macro2",
+ "quote",
+ "strict",
+ "syn",
+]
+
+[[package]]
 name = "crossterm"
 version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -423,6 +447,7 @@ dependencies = [
  "anyhow",
  "ascii-forge",
  "clap",
+ "crokey",
  "dirs",
  "serde",
  "serde_yaml",
@@ -554,6 +579,12 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
+
+[[package]]
+name = "strict"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f42444fea5b87a39db4218d9422087e66a85d0e7a0963a439b07bcdf91804006"
 
 [[package]]
 name = "strsim"
