@@ -169,8 +169,9 @@ dependencies = [
 
 [[package]]
 name = "crokey"
-version = "1.1.2"
-source = "git+https://github.com/TheEmeraldBee/crokey?branch=crossterm-29#8e14c6f32f6bcbf17739a698b86048575cfaa73b"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5282b45c96c5978c8723ea83385cb9a488b64b7d175733f48d07bf9da514a863"
 dependencies = [
  "crokey-proc_macros",
  "crossterm",
@@ -181,8 +182,9 @@ dependencies = [
 
 [[package]]
 name = "crokey-proc_macros"
-version = "1.1.2"
-source = "git+https://github.com/TheEmeraldBee/crokey?branch=crossterm-29#8e14c6f32f6bcbf17739a698b86048575cfaa73b"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2ea0218d3fedf0797fa55676f1964ef5d27103d41ed0281b4bbd2a6e6c3d8d28"
 dependencies = [
  "crossterm",
  "proc-macro2",
